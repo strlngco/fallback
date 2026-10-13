@@ -1,0 +1,49 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ListCommand > list --json emits byte-stable stdout (broken entry) 1`] = `
+"[
+  {
+    "broken": true,
+    "brokenReason": "manifest.json missing",
+    "shop": "example.myshopify.com",
+    "snapshotId": "2026-05-28T10-00-00Z",
+    "directoryPath": "<BASE_DIR>/example.myshopify.com/2026-05-28T10-00-00Z",
+    "directorySize": 50
+  }
+]
+"
+`;
+
+exports[`ListCommand > list --json emits byte-stable stdout (healthy) 1`] = `
+"[
+  {
+    "version": 1,
+    "shop": "example.myshopify.com",
+    "capturedAt": "2026-05-28T10:00:00.000Z",
+    "apiVersion": "2026-04",
+    "fallbackVersion": "0.1.0",
+    "scope": {
+      "products": true,
+      "collections": true,
+      "metafields": true,
+      "inventoryLevels": true,
+      "themes": false,
+      "customers": false,
+      "orders": false,
+      "discounts": false
+    },
+    "counts": {
+      "products": 12,
+      "variants": 29,
+      "collections": 1,
+      "metafields": 16,
+      "inventoryLevels": 29
+    },
+    "durationMs": 1234,
+    "snapshotId": "2026-05-28T10-00-00Z",
+    "directoryPath": "<BASE_DIR>/example.myshopify.com/2026-05-28T10-00-00Z",
+    "directorySize": 652
+  }
+]
+"
+`;

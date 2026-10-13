@@ -1,0 +1,63 @@
+{
+  "name": "@strlngco/fallback",
+  "version": "1.0.1",
+  "description": "Deterministic snapshot, diff, and restore CLI for Shopify stores.",
+  "keywords": [
+    "shopify",
+    "snapshot",
+    "diff",
+    "restore",
+    "backup",
+    "cli",
+    "ai-agents"
+  ],
+  "homepage": "https://github.com/strlngco/fallback#readme",
+  "bugs": {
+    "url": "https://github.com/strlngco/fallback/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/strlngco/fallback.git",
+    "directory": "packages/cli"
+  },
+  "license": "MIT",
+  "author": "Strlng <hello@strlng.co>",
+  "type": "module",
+  "bin": {
+    "fallback": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:integration": "INTEGRATION=1 vitest run src/commands/__tests__/integration",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "prepack": "node ../../scripts/package-docs.mjs copy",
+    "postpack": "node ../../scripts/package-docs.mjs clean",
+    "prepublishOnly": "pnpm -w run build && pnpm -w run typecheck && pnpm -w run test && node ../../scripts/smoke-pack.mjs"
+  },
+  "dependencies": {
+    "clipanion": "^3.2.1",
+    "graphql-request": "^7.1.2",
+    "picocolors": "^1.1.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@strlngco/fallback-core": "workspace:*",
+    "@strlngco/fallback-shopify": "workspace:*",
+    "@types/node": "^20.16.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.0"
+  }
+}

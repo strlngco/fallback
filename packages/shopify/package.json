@@ -1,0 +1,35 @@
+{
+  "name": "@strlngco/fallback-shopify",
+  "version": "1.0.1",
+  "private": true,
+  "description": "Shopify adapter for Fallback. Owns GraphQL queries and response schemas.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@strlngco/fallback-core": "workspace:*",
+    "graphql-request": "^7.1.2",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.0"
+  }
+}

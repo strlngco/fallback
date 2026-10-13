@@ -1,0 +1,162 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`DiffCommand > diff --json emits byte-stable stdout 1`] = `
+"{
+  "snapshotId": "2026-05-29T04-24-50Z",
+  "shop": "example.myshopify.com",
+  "computedAt": "2026-05-29T05:00:00.000Z",
+  "resources": {
+    "products": {
+      "created": [],
+      "updated": [
+        {
+          "id": "gid://shopify/Product/1",
+          "before": {
+            "id": "gid://shopify/Product/1",
+            "handle": "tee",
+            "title": "A",
+            "descriptionHtml": "<p>tee</p>",
+            "productType": "Shirts",
+            "vendor": "Strlng",
+            "tags": [],
+            "status": "ACTIVE",
+            "templateSuffix": null,
+            "options": [],
+            "seo": {
+              "title": null,
+              "description": null
+            },
+            "createdAt": "2026-05-01T00:00:00Z",
+            "updatedAt": "2026-05-01T00:00:00Z",
+            "publishedAt": "2026-05-01T00:00:00Z",
+            "variants": [
+              {
+                "id": "gid://shopify/ProductVariant/100",
+                "product": {
+                  "id": "gid://shopify/Product/1"
+                },
+                "title": "Default",
+                "sku": "TEE-1",
+                "barcode": null,
+                "price": {
+                  "amount": "19.99",
+                  "currencyCode": "USD"
+                },
+                "compareAtPrice": null,
+                "position": 1,
+                "inventoryPolicy": "DENY",
+                "inventoryQuantity": 5,
+                "taxable": true,
+                "taxCode": null,
+                "selectedOptions": [],
+                "inventoryItem": {
+                  "id": "gid://shopify/InventoryItem/1000",
+                  "tracked": true,
+                  "requiresShipping": true,
+                  "measurement": {
+                    "weight": null
+                  }
+                },
+                "createdAt": "2026-05-01T00:00:00Z",
+                "updatedAt": "2026-05-01T00:00:00Z"
+              }
+            ]
+          },
+          "after": {
+            "id": "gid://shopify/Product/1",
+            "handle": "tee",
+            "title": "B",
+            "descriptionHtml": "<p>tee</p>",
+            "productType": "Shirts",
+            "vendor": "Strlng",
+            "tags": [],
+            "status": "ACTIVE",
+            "templateSuffix": null,
+            "options": [],
+            "seo": {
+              "title": null,
+              "description": null
+            },
+            "createdAt": "2026-05-01T00:00:00Z",
+            "updatedAt": "2026-05-01T00:00:00Z",
+            "publishedAt": "2026-05-01T00:00:00Z",
+            "variants": [
+              {
+                "id": "gid://shopify/ProductVariant/100",
+                "product": {
+                  "id": "gid://shopify/Product/1"
+                },
+                "title": "Default",
+                "sku": "TEE-1",
+                "barcode": null,
+                "price": {
+                  "amount": "19.99",
+                  "currencyCode": "USD"
+                },
+                "compareAtPrice": null,
+                "position": 1,
+                "inventoryPolicy": "DENY",
+                "inventoryQuantity": 5,
+                "taxable": true,
+                "taxCode": null,
+                "selectedOptions": [],
+                "inventoryItem": {
+                  "id": "gid://shopify/InventoryItem/1000",
+                  "tracked": true,
+                  "requiresShipping": true,
+                  "measurement": {
+                    "weight": null
+                  }
+                },
+                "createdAt": "2026-05-01T00:00:00Z",
+                "updatedAt": "2026-05-01T00:00:00Z"
+              }
+            ]
+          },
+          "changes": [
+            {
+              "path": "title",
+              "before": "A",
+              "after": "B"
+            }
+          ],
+          "ignoredCount": 0
+        }
+      ],
+      "deleted": [],
+      "unchanged": 0,
+      "snapshotCount": 1,
+      "currentCount": 1,
+      "ignoredCount": 0
+    },
+    "collections": {
+      "created": [],
+      "updated": [],
+      "deleted": [],
+      "unchanged": 0,
+      "snapshotCount": 0,
+      "currentCount": 0,
+      "ignoredCount": 0
+    },
+    "metafields": {
+      "created": [],
+      "updated": [],
+      "deleted": [],
+      "unchanged": 0,
+      "snapshotCount": 0,
+      "currentCount": 0,
+      "ignoredCount": 0
+    },
+    "inventoryLevels": {
+      "created": [],
+      "updated": [],
+      "deleted": [],
+      "unchanged": 0,
+      "snapshotCount": 0,
+      "currentCount": 0,
+      "ignoredCount": 0
+    }
+  }
+}
+"
+`;

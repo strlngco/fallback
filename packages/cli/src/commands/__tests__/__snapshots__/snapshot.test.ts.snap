@@ -1,0 +1,26 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`SnapshotCommand > snapshot --json emits byte-stable stdout 1`] = `
+"{
+  "snapshotId": "2026-05-06T14-30-22Z",
+  "snapshotDir": "/tmp/snap/example.myshopify.com/2026-05-06T14-30-22Z",
+  "manifestPath": "/tmp/snap/example.myshopify.com/2026-05-06T14-30-22Z/manifest.json",
+  "counts": {
+    "products": 2,
+    "variants": 5,
+    "collections": 3,
+    "metafields": 7,
+    "inventoryLevels": 11
+  },
+  "durationMs": 1234,
+  "shop": "example.myshopify.com",
+  "scope": {
+    "products": true,
+    "collections": true,
+    "metafields": true,
+    "inventoryLevels": true,
+    "metaobjects": true
+  }
+}
+"
+`;
