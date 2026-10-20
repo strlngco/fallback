@@ -30,14 +30,38 @@ interface UserErrorPayload {
   userErrors: ShopifyUserErrorEntry[];
 }
 
+// A product restore is one productUpdate plus one productVariantsBulkUpdate per
+// 100 variants, and each call commits on its own. When a later call fails, the
+// earlier writes stand, so the error says what was already written.
+export class PartialProductRestoreError extends Error {
+  override readonly name = 'PartialProductRestoreError';
+  readonly written: readonly string[];
+  constructor(cause: unknown, written: readonly string[]) {
+    super(cause instanceof Error ? cause.message : String(cause), { cause });
+    this.written = written;
+  }
+}
+
 export async function restoreProduct(client: Requester, op: RestoreOperation): Promise<void> {
   const inputs = buildProductMutationInputs(op);
+  const written: string[] = [];
+  let variantsWritten = 0;
 
-  if (inputs.product !== null) {
-    await runProductUpdate(client, inputs.product);
-  }
-  for (const batch of chunk(inputs.variants, VARIANTS_PER_CALL)) {
-    await runVariantsBulkUpdate(client, inputs.productId, batch);
+  try {
+    if (inputs.product !== null) {
+      await runProductUpdate(client, inputs.product);
+      written.push('product fields');
+    }
+    for (const batch of chunk(inputs.variants, VARIANTS_PER_CALL)) {
+      await runVariantsBulkUpdate(client, inputs.productId, batch);
+      variantsWritten += batch.length;
+    }
+  } catch (err) {
+    if (variantsWritten > 0) {
+      written.push(`${variantsWritten} of ${inputs.variants.length} variants`);
+    }
+    if (written.length === 0) throw err;
+    throw new PartialProductRestoreError(err, written);
   }
 }
 

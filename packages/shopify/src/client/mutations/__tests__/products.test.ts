@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { RestoreOperation } from '@strlngco/fallback-core';
 import { ShopifyUserError, type Requester } from '../../client';
-import { restoreProduct } from '../products';
+import { PartialProductRestoreError, restoreProduct } from '../products';
 
 const PRODUCT_ID = 'gid://shopify/Product/1';
 
@@ -71,5 +71,60 @@ describe('restoreProduct', () => {
     const docs = (client.request as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0] as string);
     expect(docs.some((d) => d.includes('productVariantsBulkUpdate'))).toBe(true);
     expect(docs.some((d) => d.includes('productUpdate('))).toBe(false);
+  });
+});
+
+describe('restoreProduct partial writes', () => {
+  function variant(n: number): Record<string, unknown> {
+    return {
+      id: `gid://shopify/ProductVariant/${n}`, product: { id: PRODUCT_ID }, title: `V${n}`, sku: `S${n}`,
+      barcode: null, price: { amount: '5.00', currencyCode: 'USD' }, compareAtPrice: null, position: n,
+      inventoryPolicy: 'DENY', inventoryQuantity: 0, taxable: true, taxCode: null, selectedOptions: [],
+      inventoryItem: { id: `gid://shopify/InventoryItem/${n}`, tracked: true, requiresShipping: true, measurement: { weight: null } },
+      createdAt: '2026-05-01T00:00:00Z', updatedAt: '2026-05-01T00:00:00Z',
+    };
+  }
+
+  function opWithVariants(count: number): RestoreOperation {
+    const product = flatProduct();
+    const variants = Array.from({ length: count }, (_, i) => variant(i + 1));
+    product['variants'] = variants;
+    return {
+      resource: 'products', id: PRODUCT_ID,
+      changes: [
+        { path: 'title', before: 'Old', after: 'New' },
+        ...variants.map((v) => ({ path: `variants[${String(v['id'])}].price.amount`, before: '5.00', after: '6.00' })),
+      ],
+      targetRecord: product,
+    };
+  }
+
+  it('says what was written when a later variant batch fails', async () => {
+    let variantCalls = 0;
+    const client = {
+      request: vi.fn(async (document: string) => {
+        if (document.includes('productUpdate(')) return { productUpdate: { product: { id: PRODUCT_ID }, userErrors: [] } };
+        variantCalls++;
+        if (variantCalls === 2) {
+          return { productVariantsBulkUpdate: { productVariants: null, userErrors: [{ field: ['price'], message: 'bad price' }] } };
+        }
+        return { productVariantsBulkUpdate: { productVariants: [], userErrors: [] } };
+      }),
+    } as unknown as Requester;
+
+    const err = await restoreProduct(client, opWithVariants(150)).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(PartialProductRestoreError);
+    const partial = err as PartialProductRestoreError;
+    expect(partial.written).toEqual(['product fields', '100 of 150 variants']);
+    expect(partial.cause).toBeInstanceOf(ShopifyUserError);
+    expect(partial.message).toContain('bad price');
+  });
+
+  it('throws the original error when nothing was written', async () => {
+    const client = fakeClient({
+      productUpdate: { productUpdate: { product: null, userErrors: [{ field: ['title'], message: 'bad' }] } },
+    });
+    const err = await restoreProduct(client, opWithVariants(2)).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ShopifyUserError);
   });
 });

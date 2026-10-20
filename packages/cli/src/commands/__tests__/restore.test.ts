@@ -7,7 +7,7 @@ import { Cli } from 'clipanion';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Manifest, RestoreOperation } from '@strlngco/fallback-core';
-import { ShopifyUserError, type Metafield, type Metaobject, type MetaobjectDefinition } from '@strlngco/fallback-shopify';
+import { PartialProductRestoreError, ShopifyUserError, type Metafield, type Metaobject, type MetaobjectDefinition } from '@strlngco/fallback-shopify';
 import type { ProductRecord } from '../../snapshot/writer';
 import { RestoreCommand, type RestoreContext, type RestoreDependencies } from '../restore';
 
@@ -291,6 +291,28 @@ describe('RestoreCommand (--apply)', () => {
     expect(stderr).toContain('Restored 1, failed 1, skipped 0');
     expect(stderr).toContain('boom');
     expect(deps.mutators.restoreProduct).toHaveBeenCalledTimes(2);
+  });
+
+  it('reports what was written when a product is only partly restored', async () => {
+    await setupSnapshot(baseDir, [buildProductRecord('Old')]);
+    const partial = new PartialProductRestoreError(new Error('bad price'), ['product fields', '100 of 150 variants']);
+    const deps = makeDeps([buildProductRecord('New')], {
+      mutators: {
+        restoreProduct: vi.fn().mockRejectedValue(partial),
+        restoreMetafields: vi.fn(async () => undefined),
+        restoreMetaobject: vi.fn(async () => undefined),
+      },
+    });
+    const human = await run(['restore', SNAPSHOT_ID, '--base-dir', baseDir, '--apply'], deps);
+    expect(human.exit).toBe(2);
+    expect(human.stderr).toContain('bad price');
+    expect(human.stderr).toContain(
+      'Written before the failure: product fields, 100 of 150 variants. Run restore again to finish the rest.',
+    );
+
+    const json = await run(['restore', SNAPSHOT_ID, '--base-dir', baseDir, '--apply', '--json'], deps);
+    const parsed = JSON.parse(json.stdout) as { results: Array<{ status: string; written?: string[] }> };
+    expect(parsed.results[0]).toMatchObject({ status: 'failed', written: ['product fields', '100 of 150 variants'] });
   });
 
   it('emits the result as JSON with --apply --json', async () => {

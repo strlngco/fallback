@@ -18,6 +18,11 @@ All notable changes to this project are documented here. The format is based on
 
 ### Fixed
 
+- When a product is only partly restored (its product fields or a first
+  batch of variants were written before a later call failed), `restore
+  --apply` now says what was written, in the report and as a `written`
+  list on the failed result in `--json` output. Running `restore` again
+  writes only what is still different.
 - `.env` files accept `export KEY=value` lines and trailing `# comments`
   after unquoted values. A `#` inside quotes, or inside an unquoted value
   with no space before it, is kept.

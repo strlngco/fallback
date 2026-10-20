@@ -14,6 +14,7 @@ import {
   type RestoreResult,
 } from '@strlngco/fallback-core';
 import {
+  PartialProductRestoreError,
   ShopifyUserError,
   type ScopedRequester,
   type ShopifyClientOptions,
@@ -211,7 +212,13 @@ export class RestoreCommand extends Command<RestoreContext> {
         await this.context.deps.mutators.restoreProduct(client, op);
         results.push({ resource: 'products', id: op.id, status: 'restored' });
       } catch (err) {
-        results.push({ resource: 'products', id: op.id, status: 'failed', error: messageOf(err) });
+        results.push({
+          resource: 'products',
+          id: op.id,
+          status: 'failed',
+          error: messageOf(err),
+          ...(err instanceof PartialProductRestoreError ? { written: [...err.written] } : {}),
+        });
       }
     }
 

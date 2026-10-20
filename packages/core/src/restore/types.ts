@@ -52,6 +52,8 @@ export const RestoreOperationResultSchema = z.object({
   id: z.string(),
   status: z.enum(['restored', 'failed']),
   error: z.string().optional(),
+  // On a failed operation, the parts that were written before the failure.
+  written: z.array(z.string()).optional(),
 });
 
 export type RestoreOperationResult = z.infer<typeof RestoreOperationResultSchema>;

@@ -37,7 +37,12 @@ export function formatRestoreResult(result: RestoreResult): string[] {
   const failures = result.results.filter((r) => r.status === 'failed');
   if (failures.length > 0) {
     lines.push('Failed:');
-    for (const f of failures) lines.push(`  ${f.id}: ${f.error ?? 'unknown error'}`);
+    for (const f of failures) {
+      lines.push(`  ${f.id}: ${f.error ?? 'unknown error'}`);
+      if (f.written !== undefined && f.written.length > 0) {
+        lines.push(`    Written before the failure: ${f.written.join(', ')}. Run restore again to finish the rest.`);
+      }
+    }
   }
   return lines;
 }
