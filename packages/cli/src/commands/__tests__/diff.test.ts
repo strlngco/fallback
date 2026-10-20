@@ -404,6 +404,18 @@ afterEach(async () => {
 });
 
 describe('DiffCommand', () => {
+  it('names the target store on the first line, but not with --json', async () => {
+    const product: ProductRecord = { product: buildProduct(), variants: [buildVariant()] };
+    await setupSnapshot({ baseDir, products: [product], collections: [], metafields: [], inventoryLevels: [] });
+    const deps = makeFakeDeps({ products: [product], collections: [], metafields: [], inventoryLevels: [] });
+
+    const human = await runDiff(['diff', SNAPSHOT_ID, '--base-dir', baseDir], deps);
+    expect(human.stderr.split('\n')[0]).toBe(`Diffing ${SHOP} against snapshot ${SNAPSHOT_ID}`);
+
+    const json = await runDiff(['diff', SNAPSHOT_ID, '--base-dir', baseDir, '--json'], deps);
+    expect(json.stderr).not.toContain('Diffing');
+  });
+
   it('reports "No changes" for every resource when current matches the snapshot exactly', async () => {
     const product: ProductRecord = { product: buildProduct(), variants: [buildVariant()] };
     const collection = buildCollection();

@@ -188,6 +188,7 @@ Later, after an AI session, a bulk import, or anything else that edits your cata
 
 ```
 $ fallback diff 2026-10-12T14-30-22Z
+Diffing example-store.myshopify.com against snapshot 2026-10-12T14-30-22Z
 Products
   Created: 0
   Updated: 2
@@ -227,6 +228,7 @@ Each change reads `field: value in the snapshot → value now`. Here a product t
 
 ```
 $ fallback restore 2026-10-12T14-30-22Z
+Planning restore of example-store.myshopify.com to snapshot 2026-10-12T14-30-22Z
 Dry run — no changes written. Re-run with --apply to write.
 
 To write: 2
@@ -245,6 +247,7 @@ Here each line reads `value now → value restore will write`. Read the preview,
 
 ```
 $ fallback restore 2026-10-12T14-30-22Z --apply
+Restoring example-store.myshopify.com to snapshot 2026-10-12T14-30-22Z
 Restored 2, failed 0, skipped 0
 ```
 
@@ -375,6 +378,7 @@ Default output suppresses changes that happen on every save without meaningfully
 
 ```
 $ fallback diff 2026-10-12T14-30-22Z --show-ignored
+Diffing example-store.myshopify.com against snapshot 2026-10-12T14-30-22Z
 Products
   Created: 0
   Updated: 2
@@ -395,6 +399,7 @@ Products
 
 ```
 $ fallback diff 2026-10-12T14-30-22Z --summary-only
+Diffing example-store.myshopify.com against snapshot 2026-10-12T14-30-22Z
 Products: +0 / ~2 / -0 (3 in snapshot, 3 in current)
 Collections: +0 / ~0 / -0 (1 in snapshot, 1 in current)
 Metafields: +0 / ~0 / -0 (0 in snapshot, 0 in current)
@@ -453,7 +458,7 @@ Fallback looks for each variable in this order and uses the first it finds:
 2. A `.env` file in the current folder.
 3. `~/.fallback/.env`.
 
-The current-folder `.env` lets a project carry its own store settings, but it also means **the folder you run a command from can change which store it targets**. A project `.env` that sets `SHOPIFY_SHOP_DOMAIN` points `restore --apply` at that store. When in doubt, pass `--shop your-store.myshopify.com` to name the store explicitly; it overrides every other setting.
+The current-folder `.env` lets a project carry its own store settings, but it also means **the folder you run a command from can change which store it targets**. A project `.env` that sets `SHOPIFY_SHOP_DOMAIN` points `restore --apply` at that store. `diff` and `restore` name the store they are about to read or write on their first line, so check it before letting a restore run. When in doubt, pass `--shop your-store.myshopify.com` to name the store explicitly; it overrides every other setting.
 
 Fallback exchanges the client credentials for a short-lived access token at runtime, kept in memory and refreshed automatically. The token never touches disk; your client credentials do, which is why step 5 recommends `chmod 600`.
 

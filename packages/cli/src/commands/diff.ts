@@ -91,6 +91,12 @@ export class DiffCommand extends Command<SnapshotContext> {
     const manifest = await loadManifest(snapshotDir, this.snapshotId);
     const scope = resolveDiffScope(this.scope, manifest.scope);
 
+    // Credentials can come from a .env in the working directory, so name the
+    // store before fetching: a diff against the wrong store is visible at once.
+    if (!this.json) {
+      this.context.stderr.write(`Diffing ${auth.shopDomain} against snapshot ${this.snapshotId}\n`);
+    }
+
     const client = this.context.deps.buildClient({
       credentials: {
         shopDomain: auth.shopDomain,

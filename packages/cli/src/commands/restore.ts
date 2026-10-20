@@ -138,6 +138,13 @@ export class RestoreCommand extends Command<RestoreContext> {
     const manifest = await loadManifest(snapshotDir, this.snapshotId);
     const scope = resolveRestoreScope(this.scope, manifest.scope);
 
+    // Credentials can come from a .env in the working directory, so name the
+    // store before any fetch or write.
+    if (!this.json) {
+      const verb = this.apply ? 'Restoring' : 'Planning restore of';
+      this.context.stderr.write(`${verb} ${auth.shopDomain} to snapshot ${this.snapshotId}\n`);
+    }
+
     const client = this.context.deps.buildClient({
       credentials: {
         shopDomain: auth.shopDomain,

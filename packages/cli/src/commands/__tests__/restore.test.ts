@@ -190,6 +190,12 @@ describe('RestoreCommand (dry-run)', () => {
     expect(deps.mutators.restoreProduct).not.toHaveBeenCalled();
   });
 
+  it('names the target store on the first line', async () => {
+    await setupSnapshot(baseDir, [buildProductRecord('Old')]);
+    const { stderr } = await run(['restore', SNAPSHOT_ID, '--base-dir', baseDir], makeDeps([buildProductRecord('New')]));
+    expect(stderr.split('\n')[0]).toBe(`Planning restore of ${SHOP} to snapshot ${SNAPSHOT_ID}`);
+  });
+
   it('previews the plan on read-only scopes (does not require write_products)', async () => {
     await setupSnapshot(baseDir, [buildProductRecord('Old')]);
     const deps = makeDeps([buildProductRecord('New')], {
@@ -251,6 +257,7 @@ describe('RestoreCommand (--apply)', () => {
     expect(exit).toBe(0);
     expect(deps.mutators.restoreProduct).toHaveBeenCalledTimes(1);
     expect(stderr).toContain('Restored 1, failed 0, skipped 0');
+    expect(stderr.split('\n')[0]).toBe(`Restoring ${SHOP} to snapshot ${SNAPSHOT_ID}`);
   });
 
   it('continues on a failed op and exits 2 with a Failed block', async () => {

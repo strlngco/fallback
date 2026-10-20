@@ -3,6 +3,22 @@
 All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- `diff` and `restore` name the store on their first line (`Diffing
+  <store> against snapshot <id>`, `Restoring <store> to snapshot <id>`)
+  before they fetch or write anything, so a `.env` in the working
+  directory that points at another store is visible at once. `--json`
+  output is unchanged.
+
+### Fixed
+
+- `.env` files accept `export KEY=value` lines and trailing `# comments`
+  after unquoted values. A `#` inside quotes, or inside an unquoted value
+  with no space before it, is kept.
+
 ## [1.0.1] — 2026-10-13
 
 First release on npm, as `@strlngco/fallback`. The command is still
@@ -180,4 +196,5 @@ Initial release, distributed from source and not tagged.
 - Authentication through Shopify's client credentials grant for Dev Dashboard
   apps; the access token is never written to disk.
 
+[Unreleased]: https://github.com/strlngco/fallback/compare/v1.0.1...HEAD
 [1.0.1]: https://github.com/strlngco/fallback/releases/tag/v1.0.1
