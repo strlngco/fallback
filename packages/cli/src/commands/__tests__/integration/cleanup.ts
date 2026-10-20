@@ -4,6 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseEnvFile } from '../../../env';
 
 // Path to the built CLI. Integration tests require `pnpm build` to have been
 // run first — they spawn the actual compiled binary to exercise the same code
@@ -99,26 +100,5 @@ function mergeFile(target: Record<string, string>, path: string): void {
   } catch {
     return;
   }
-  Object.assign(target, parseEnvFileContent(content));
-}
-
-function parseEnvFileContent(content: string): Record<string, string> {
-  const result: Record<string, string> = {};
-  for (const rawLine of content.split('\n')) {
-    const line = rawLine.trim();
-    if (line.length === 0 || line.startsWith('#')) continue;
-    const eq = line.indexOf('=');
-    if (eq <= 0) continue;
-    const key = line.slice(0, eq).trim();
-    if (key.length === 0) continue;
-    let value = line.slice(eq + 1).trim();
-    if (
-      (value.startsWith('"') && value.endsWith('"') && value.length >= 2) ||
-      (value.startsWith("'") && value.endsWith("'") && value.length >= 2)
-    ) {
-      value = value.slice(1, -1);
-    }
-    result[key] = value;
-  }
-  return result;
+  Object.assign(target, parseEnvFile(content));
 }

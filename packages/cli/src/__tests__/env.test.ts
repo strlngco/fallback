@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ShopifyConfigError } from '@strlngco/fallback-shopify';
-import { resolveAuth, resolveShopDomain } from '../env';
+import { parseEnvFile, resolveAuth, resolveShopDomain } from '../env';
 
 let dir: string;
 beforeEach(async () => {
@@ -83,5 +83,40 @@ describe('resolveAuth validation', () => {
         },
       }),
     ).rejects.toBeInstanceOf(ShopifyConfigError);
+  });
+});
+
+describe('parseEnvFile', () => {
+  it('reads plain, double-quoted, and single-quoted values', () => {
+    expect(parseEnvFile('A=one\nB="two"\nC=\'three\'\n')).toEqual({ A: 'one', B: 'two', C: 'three' });
+  });
+
+  it('accepts lines written as shell exports', () => {
+    expect(parseEnvFile('export SHOPIFY_CLIENT_ID=abc\nexport  B="x y"\n')).toEqual({
+      SHOPIFY_CLIENT_ID: 'abc',
+      B: 'x y',
+    });
+  });
+
+  it('drops an inline comment after an unquoted value', () => {
+    expect(parseEnvFile('SHOPIFY_SHOP_DOMAIN=example-store.myshopify.com # staging\n')).toEqual({
+      SHOPIFY_SHOP_DOMAIN: 'example-store.myshopify.com',
+    });
+  });
+
+  it('keeps a # that is part of an unquoted value', () => {
+    expect(parseEnvFile('A=abc#def\n')).toEqual({ A: 'abc#def' });
+  });
+
+  it('keeps a # inside quotes and drops a comment after the closing quote', () => {
+    expect(parseEnvFile('A="abc # def" # note\nB=\'x#y\'#note\n')).toEqual({ A: 'abc # def', B: 'x#y' });
+  });
+
+  it('handles CRLF line endings and skips comments and blank lines', () => {
+    expect(parseEnvFile('# header\r\n\r\nA=one\r\nB="two"\r\n')).toEqual({ A: 'one', B: 'two' });
+  });
+
+  it('treats a key named export as a key', () => {
+    expect(parseEnvFile('export=1\n')).toEqual({ export: '1' });
   });
 });

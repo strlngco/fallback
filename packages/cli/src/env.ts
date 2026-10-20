@@ -115,20 +115,25 @@ async function mergeEnvFile(target: Record<string, string>, path: string): Promi
 export function parseEnvFile(content: string): Record<string, string> {
   const result: Record<string, string> = {};
   for (const rawLine of content.split('\n')) {
-    const line = rawLine.trim();
+    const line = rawLine.trim().replace(/^export\s+/, '');
     if (line.length === 0 || line.startsWith('#')) continue;
     const eq = line.indexOf('=');
     if (eq <= 0) continue;
     const key = line.slice(0, eq).trim();
     if (key.length === 0) continue;
-    let value = line.slice(eq + 1).trim();
-    if (
-      (value.startsWith('"') && value.endsWith('"') && value.length >= 2) ||
-      (value.startsWith("'") && value.endsWith("'") && value.length >= 2)
-    ) {
-      value = value.slice(1, -1);
-    }
-    result[key] = value;
+    result[key] = parseEnvValue(line.slice(eq + 1).trim());
   }
   return result;
+}
+
+// Matches the common dotenv reading: quotes protect a #, and outside quotes a
+// # starts a comment only after whitespace, so unquoted secrets containing #
+// still survive.
+function parseEnvValue(raw: string): string {
+  const quote = raw[0];
+  if (quote === '"' || quote === "'") {
+    const close = raw.indexOf(quote, 1);
+    if (close > 0) return raw.slice(1, close);
+  }
+  return raw.replace(/\s+#.*$/, '');
 }
