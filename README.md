@@ -332,7 +332,7 @@ Options:
   --quiet               Suppress all non-error output
 ```
 
-Resources captured: products (with variants, prices, inventory quantity, options), collections (custom and smart, with resolved membership), metafields on product, variant, collection, and shop owners plus their definitions, metaobjects and their definitions, and inventory levels per location. Metaobjects are part of the default scope; leave them out (`--scope products,collections,metafields,inventory-levels`) if you don't want to grant the two metaobject read scopes.
+Resources captured: products (with variants, prices, inventory quantity, options), collections (custom and smart, with resolved membership), metafields on product, variant, collection, and shop owners plus their definitions, metaobjects and their definitions, and inventory levels per location, including deactivated locations and fulfillment services' legacy locations. Metaobjects are part of the default scope; leave them out (`--scope products,collections,metafields,inventory-levels`) if you don't want to grant the two metaobject read scopes.
 
 The manifest records which metafield owners were captured, so a later `diff` knows exactly what a given snapshot covers rather than assuming full coverage.
 

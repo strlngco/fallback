@@ -18,6 +18,7 @@ import {
 import type {
   Collection,
   InventoryLevel,
+  InventoryLevelsOptions,
   Metafield,
   MetafieldDefinition,
   Metaobject,
@@ -118,7 +119,7 @@ export interface DiffFetchers {
     client: Requester,
     types: Iterable<string> | AsyncIterable<string>,
   ) => AsyncIterable<Metaobject>;
-  inventoryLevels: (client: Requester) => AsyncIterable<InventoryLevel>;
+  inventoryLevels: (client: Requester, options?: InventoryLevelsOptions) => AsyncIterable<InventoryLevel>;
 }
 
 export interface ComputeDiffOptions {
@@ -133,6 +134,7 @@ export interface ComputeDiffOptions {
   // Coverage recorded in the manifest, not CLI capability — this is what keeps a diff
   // against an old snapshot fetching exactly what that snapshot captured.
   metafieldOwnerTypes: readonly string[];
+  inventoryAllLocations: boolean;
   hasMetafieldDefinitions: boolean;
 }
 
@@ -219,7 +221,7 @@ export async function computeSnapshotDiff(opts: ComputeDiffOptions): Promise<Sna
   if (scope.inventoryLevels) {
     const levelsDiff = await diffResources<InventoryLevel>({
       snapshot: readNdjson<InventoryLevel>(join(snapshotDir, 'inventory-levels.ndjson')),
-      current: fetchers.inventoryLevels(client),
+      current: fetchers.inventoryLevels(client, { allLocations: opts.inventoryAllLocations }),
       getId: (l) => l.id,
     });
     resources['inventoryLevels'] = levelsDiff as ResourceDiff<unknown>;

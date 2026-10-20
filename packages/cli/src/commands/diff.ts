@@ -123,6 +123,7 @@ export class DiffCommand extends Command<SnapshotContext> {
       showIgnored: this.showIgnored,
       now: this.context.deps.now,
       metafieldOwnerTypes: manifestMetafieldOwnerTypes(manifest.scope),
+      inventoryAllLocations: manifest.scope.inventoryAllLocations === true,
       hasMetafieldDefinitions: manifest.scope.metafieldOwnerTypes !== undefined,
     });
 

@@ -195,6 +195,7 @@ describe('SnapshotCommand', () => {
     expect(deps.fetchers.collections).toHaveBeenCalledTimes(1);
     expect(deps.fetchers.metafields).toHaveBeenCalledTimes(1);
     expect(deps.fetchers.inventoryLevels).toHaveBeenCalledTimes(1);
+    expect(deps.fetchers.inventoryLevels).toHaveBeenCalledWith(expect.anything(), { allLocations: true });
     expect(deps.fetchers.variantMetafields).toHaveBeenCalledTimes(1);
     expect(deps.fetchers.collectionMetafields).toHaveBeenCalledTimes(1);
     expect(deps.fetchers.shopMetafields).toHaveBeenCalledTimes(1);

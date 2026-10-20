@@ -23,6 +23,12 @@ All notable changes to this project are documented here. The format is based on
   the points the request asked for rather than a fixed backoff. Large
   catalogs hit fewer throttling errors.
 
+- Snapshots capture inventory levels at deactivated locations and at
+  fulfillment services' legacy locations, which Shopify leaves out unless
+  asked. The manifest records this as `scope.inventoryAllLocations`. A
+  diff against a snapshot taken with 1.0.1 or earlier still reads active
+  locations only, so upgrading does not report those levels as created.
+
 ### Fixed
 
 - `restore --apply` stops at the first write Shopify rejects for bad

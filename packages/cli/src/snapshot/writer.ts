@@ -227,6 +227,7 @@ export class SnapshotWriter {
         inventoryLevels: scope.inventoryLevels,
         metaobjects: scope.metaobjects,
         metafieldOwnerTypes: scope.metafields ? [...CONTENT_METAFIELD_OWNER_TYPES] : [],
+        ...(scope.inventoryLevels ? { inventoryAllLocations: true } : {}),
         themes: false,
         customers: false,
         orders: false,

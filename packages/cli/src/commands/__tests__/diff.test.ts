@@ -404,6 +404,20 @@ afterEach(async () => {
 });
 
 describe('DiffCommand', () => {
+  it('fetches inventory from every location only when the snapshot did', async () => {
+    const level = buildInventoryLevel();
+    const options = async (manifest: Manifest): Promise<unknown> => {
+      await setupSnapshot({ baseDir, manifest, products: [], collections: [], metafields: [], inventoryLevels: [level] });
+      const deps = makeFakeDeps({ products: [], collections: [], metafields: [], inventoryLevels: [level] });
+      await runDiff(['diff', SNAPSHOT_ID, '--base-dir', baseDir, '--json'], deps);
+      return (deps.fetchers.inventoryLevels as ReturnType<typeof vi.fn>).mock.calls[0]?.[1];
+    };
+    // A 1.0.1 snapshot covered active locations only; widening the fetch would
+    // report every level at other locations as created.
+    expect(await options(buildManifest())).toEqual({ allLocations: false });
+    expect(await options(buildManifest({ inventoryAllLocations: true }))).toEqual({ allLocations: true });
+  });
+
   it('names the target store on the first line, but not with --json', async () => {
     const product: ProductRecord = { product: buildProduct(), variants: [buildVariant()] };
     await setupSnapshot({ baseDir, products: [product], collections: [], metafields: [], inventoryLevels: [] });

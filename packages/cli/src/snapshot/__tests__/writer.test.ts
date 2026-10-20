@@ -194,6 +194,21 @@ describe('SnapshotWriter', () => {
     expect(levelsRaw.trimEnd().split('\n')).toHaveLength(1);
   });
 
+  it('records inventoryAllLocations only when inventory levels were captured', async () => {
+    const writer = new SnapshotWriter(SHOP, baseDir);
+    await writer.start();
+    await writer.writeProducts(asAsyncIterable([{ product, variants: [variant] }]));
+    const result = await writer.finish({
+      products: true,
+      collections: false,
+      metafields: false,
+      inventoryLevels: false,
+      metaobjects: false,
+    });
+    const manifest = ManifestSchema.parse(JSON.parse(await readFile(result.manifestPath, 'utf-8')));
+    expect(manifest.scope).not.toHaveProperty('inventoryAllLocations');
+  });
+
   it('writes a manifest that validates against ManifestSchema with accurate counts and scope', async () => {
     const writer = new SnapshotWriter(SHOP, baseDir);
     await writer.start();
@@ -222,6 +237,7 @@ describe('SnapshotWriter', () => {
       inventoryLevels: true,
       metaobjects: false,
       metafieldOwnerTypes: [],
+      inventoryAllLocations: true,
       themes: false,
       customers: false,
       orders: false,

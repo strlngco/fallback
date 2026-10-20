@@ -5,6 +5,7 @@ import {
   SHOPIFY_API_VERSION,
   type Collection,
   type InventoryLevel,
+  type InventoryLevelsOptions,
   type Metafield,
   type MetafieldDefinition,
   type Metaobject,
@@ -59,7 +60,7 @@ export interface SnapshotDependencies {
       client: Requester,
       types: Iterable<string> | AsyncIterable<string>,
     ) => AsyncIterable<Metaobject>;
-    inventoryLevels: (client: Requester) => AsyncIterable<InventoryLevel>;
+    inventoryLevels: (client: Requester, options?: InventoryLevelsOptions) => AsyncIterable<InventoryLevel>;
   };
   resolveAuth: (opts: ResolveAuthOptions) => Promise<ResolvedAuth>;
   // Registers a handler for Ctrl-C / SIGTERM and returns a function that
@@ -231,7 +232,9 @@ export class SnapshotCommand extends Command<SnapshotContext> {
       }
 
       if (scope.inventoryLevels) {
-        await snapshotWriter.writeInventoryLevels(this.context.deps.fetchers.inventoryLevels(client));
+        await snapshotWriter.writeInventoryLevels(
+          this.context.deps.fetchers.inventoryLevels(client, { allLocations: true }),
+        );
       }
 
       const result = await snapshotWriter.finish(scope, {

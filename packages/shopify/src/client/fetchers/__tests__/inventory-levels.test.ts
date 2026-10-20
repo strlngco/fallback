@@ -140,3 +140,25 @@ describe('fetchInventoryLevels', () => {
     }).rejects.toThrow();
   });
 });
+
+describe('fetchInventoryLevels location coverage', () => {
+  async function locationVariables(options?: { allLocations?: boolean }): Promise<unknown> {
+    const { request, client } = fakeClient();
+    request.mockResolvedValueOnce(locationsPage([], { hasNextPage: false, endCursor: null }));
+    for await (const _ of fetchInventoryLevels(client, options)) {
+      // drain
+    }
+    const [document, variables] = request.mock.calls[0] as [string, Record<string, unknown>];
+    expect(document).toContain('includeInactive: $all');
+    expect(document).toContain('includeLegacy: $all');
+    return variables;
+  }
+
+  it('asks for deactivated and legacy locations when allLocations is set', async () => {
+    expect(await locationVariables({ allLocations: true })).toMatchObject({ all: true });
+  });
+
+  it('keeps to active locations by default, matching snapshots from 1.0.1 and earlier', async () => {
+    expect(await locationVariables()).toMatchObject({ all: false });
+  });
+});

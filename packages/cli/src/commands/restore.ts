@@ -180,6 +180,7 @@ export class RestoreCommand extends Command<RestoreContext> {
       showIgnored: false,
       now: this.context.deps.now,
       metafieldOwnerTypes: manifestMetafieldOwnerTypes(manifest.scope),
+      inventoryAllLocations: manifest.scope.inventoryAllLocations === true,
       hasMetafieldDefinitions: manifest.scope.metafieldOwnerTypes !== undefined,
     });
 

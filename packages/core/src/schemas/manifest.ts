@@ -9,6 +9,9 @@ export const ManifestScopeSchema = z.object({
   // parsed pre-content manifests and change list --json byte output for old snapshots.
   metaobjects: z.boolean().optional(),
   metafieldOwnerTypes: z.array(z.string()).optional(),
+  // True when inventory levels include deactivated and legacy locations.
+  // Snapshots from 1.0.1 and earlier lack it and covered active locations only.
+  inventoryAllLocations: z.boolean().optional(),
   themes: z.literal(false),
   customers: z.literal(false),
   orders: z.literal(false),
