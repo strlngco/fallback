@@ -97,6 +97,7 @@ export interface ShopifyClientOptions {
   tokenCache?: AccessTokenCache;
   requestTimeoutMs?: number;
   sleep?: (ms: number) => Promise<void>;
+  now?: () => number;
 }
 
 export interface Requester {
@@ -112,7 +113,13 @@ export class ShopifyClient implements Requester {
   private readonly tokenManager: TokenManager;
   private readonly maxAttempts: number;
   private readonly sleep: (ms: number) => Promise<void>;
+  private readonly now: () => number;
   private readonly requestTimeoutMs: number;
+  // Shopify's leaky-bucket state as of the last response, and the last
+  // requested cost of each document, so the next request can wait for enough
+  // points to refill instead of being throttled and backing off.
+  private bucket: { available: number; maximum: number; restoreRate: number; at: number } | undefined;
+  private readonly lastCost = new Map<string, number>();
 
   constructor(options: ShopifyClientOptions) {
     const apiVersion = options.apiVersion ?? SHOPIFY_API_VERSION;
@@ -130,6 +137,7 @@ export class ShopifyClient implements Requester {
     this.tokenManager = new TokenManager(managerOptions);
     this.maxAttempts = options.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
     this.sleep = options.sleep ?? sleep;
+    this.now = options.now ?? Date.now;
   }
 
   async getGrantedScopes(): Promise<string[]> {
@@ -173,18 +181,73 @@ export class ShopifyClient implements Requester {
     document: string,
     variables: Record<string, unknown> | undefined,
   ): Promise<T> {
+    await this.waitForBudget(document);
     const token = await this.tokenManager.getToken();
     try {
-      return await this.graphql.request<T>({
-        document,
+      const response = await this.graphql.rawRequest<T>({
+        query: document,
         ...(variables !== undefined ? { variables } : {}),
         requestHeaders: { 'X-Shopify-Access-Token': token },
       });
+      this.recordCost(document, response.extensions);
+      return response.data;
     } catch (err) {
-      if (err instanceof ClientError) throw mapError(err);
+      if (err instanceof ClientError) {
+        this.recordCost(document, err.response.extensions);
+        throw mapError(err);
+      }
       throw networkError(err, this.requestTimeoutMs);
     }
   }
+
+  private recordCost(document: string, extensions: unknown): void {
+    const cost = readQueryCost(extensions);
+    if (cost === undefined) return;
+    this.lastCost.set(document, cost.requestedQueryCost);
+    this.bucket = {
+      available: cost.throttleStatus.currentlyAvailable,
+      maximum: cost.throttleStatus.maximumAvailable,
+      restoreRate: cost.throttleStatus.restoreRate,
+      at: this.now(),
+    };
+  }
+
+  private async waitForBudget(document: string): Promise<void> {
+    const cost = this.lastCost.get(document);
+    const bucket = this.bucket;
+    if (cost === undefined || bucket === undefined || bucket.restoreRate <= 0) return;
+    const elapsedSeconds = Math.max(0, this.now() - bucket.at) / 1000;
+    const available = Math.min(bucket.maximum, bucket.available + elapsedSeconds * bucket.restoreRate);
+    if (available >= cost) return;
+    const waitMs = Math.ceil(((cost - available) / bucket.restoreRate) * 1000);
+    await this.sleep(Math.min(waitMs, MAX_RETRY_AFTER_MS));
+  }
+}
+
+interface QueryCost {
+  requestedQueryCost: number;
+  throttleStatus: { maximumAvailable: number; currentlyAvailable: number; restoreRate: number };
+}
+
+function readQueryCost(extensions: unknown): QueryCost | undefined {
+  const cost = (extensions as { cost?: Partial<QueryCost> } | undefined)?.cost;
+  const status = cost?.throttleStatus;
+  const numbers = [
+    cost?.requestedQueryCost,
+    status?.maximumAvailable,
+    status?.currentlyAvailable,
+    status?.restoreRate,
+  ];
+  if (!numbers.every((n) => typeof n === 'number' && Number.isFinite(n))) return undefined;
+  return cost as QueryCost;
+}
+
+// How long until the bucket holds what the throttled request asked for.
+function costRetryAfterMs(err: ClientError): number | undefined {
+  const cost = readQueryCost(err.response.extensions);
+  if (cost === undefined || cost.throttleStatus.restoreRate <= 0) return undefined;
+  const missing = cost.requestedQueryCost - cost.throttleStatus.currentlyAvailable;
+  return missing > 0 ? Math.ceil((missing / cost.throttleStatus.restoreRate) * 1000) : 0;
 }
 
 function withTimeout(base: typeof globalThis.fetch, timeoutMs: number): typeof globalThis.fetch {
@@ -224,7 +287,7 @@ export function mapError(err: unknown): Error {
     if (throttled) {
       return new ShopifyThrottledError(
         'Shopify throttled the request and backoff was exhausted before the limit cleared.',
-        { cause: err, retryAfterMs: retryAfterMs(err) },
+        { cause: err, retryAfterMs: maxDefined(retryAfterMs(err), costRetryAfterMs(err)) },
       );
     }
     if (status >= 500) {
@@ -252,6 +315,12 @@ function retryAfterMs(err: ClientError): number | undefined {
   if (raw === null || raw === undefined) return undefined;
   const seconds = Number(raw);
   return Number.isFinite(seconds) && seconds >= 0 ? seconds * 1000 : undefined;
+}
+
+function maxDefined(a: number | undefined, b: number | undefined): number | undefined {
+  if (a === undefined) return b;
+  if (b === undefined) return a;
+  return Math.max(a, b);
 }
 
 function backoffDelayMs(attempt: number): number {

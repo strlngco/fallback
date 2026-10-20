@@ -16,6 +16,13 @@ All notable changes to this project are documented here. The format is based on
   numbers, so the same changes always print in the same order, in the
   human report and in `--json` output.
 
+- Requests are paced by Shopify's query-cost budget. Fallback reads the
+  cost and remaining points Shopify returns with each response and, when
+  the next page would overdraw the bucket, waits only as long as the
+  refill needs. When Shopify does throttle a request, the retry waits for
+  the points the request asked for rather than a fixed backoff. Large
+  catalogs hit fewer throttling errors.
+
 ### Fixed
 
 - `restore --apply` stops at the first write Shopify rejects for bad

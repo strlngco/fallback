@@ -299,3 +299,110 @@ describe('ShopifyClient transient failures', () => {
     expect(ff.calls.filter((c) => c.url.includes('graphql.json'))).toHaveLength(1);
   });
 });
+
+describe('ShopifyClient query-cost pacing', () => {
+  function tokenOk(ff: FakeFetch): void {
+    ff.on('oauth/access_token', () =>
+      jsonResponse({ access_token: 't', expires_in: 86400, scope: '' }),
+    );
+  }
+
+  function costed(data: unknown, requested: number, available: number, restoreRate = 50): Response {
+    return jsonResponse({
+      data,
+      extensions: {
+        cost: {
+          requestedQueryCost: requested,
+          actualQueryCost: requested,
+          throttleStatus: { maximumAvailable: 1000, currentlyAvailable: available, restoreRate },
+        },
+      },
+    });
+  }
+
+  it('waits for the bucket to refill before repeating a costly query', async () => {
+    const ff = createFakeFetch();
+    tokenOk(ff);
+    ff.on('graphql.json', () => costed({ ok: true }, 100, 20));
+    const sleeps: number[] = [];
+    const client = new ShopifyClient({
+      credentials: CREDENTIALS,
+      fetch: ff.fetch,
+      now: () => 0,
+      sleep: async (ms) => { sleeps.push(ms); },
+    });
+    await client.request('{ ok }');
+    expect(sleeps).toEqual([]);
+    await client.request('{ ok }');
+    // 80 points short at 50 points a second.
+    expect(sleeps).toEqual([1600]);
+  });
+
+  it('counts the refill since the last response', async () => {
+    const ff = createFakeFetch();
+    tokenOk(ff);
+    ff.on('graphql.json', () => costed({ ok: true }, 100, 20));
+    let clock = 0;
+    const sleeps: number[] = [];
+    const client = new ShopifyClient({
+      credentials: CREDENTIALS,
+      fetch: ff.fetch,
+      now: () => clock,
+      sleep: async (ms) => { sleeps.push(ms); },
+    });
+    await client.request('{ ok }');
+    clock += 2000;
+    await client.request('{ ok }');
+    expect(sleeps).toEqual([]);
+  });
+
+  it('does not wait when the bucket has room', async () => {
+    const ff = createFakeFetch();
+    tokenOk(ff);
+    ff.on('graphql.json', () => costed({ ok: true }, 100, 900));
+    const sleeps: number[] = [];
+    const client = new ShopifyClient({
+      credentials: CREDENTIALS,
+      fetch: ff.fetch,
+      now: () => 0,
+      sleep: async (ms) => { sleeps.push(ms); },
+    });
+    await client.request('{ ok }');
+    await client.request('{ ok }');
+    expect(sleeps).toEqual([]);
+  });
+
+  it('waits as long as the throttled cost needs, not just the backoff', async () => {
+    const ff = createFakeFetch();
+    tokenOk(ff);
+    let calls = 0;
+    ff.on('graphql.json', () => {
+      calls++;
+      if (calls === 1) {
+        return jsonResponse({
+          errors: [{ message: 'Throttled', extensions: { code: 'THROTTLED' } }],
+          extensions: {
+            cost: {
+              requestedQueryCost: 500,
+              actualQueryCost: null,
+              throttleStatus: { maximumAvailable: 1000, currentlyAvailable: 100, restoreRate: 100 },
+            },
+          },
+        });
+      }
+      return jsonResponse({ data: { ok: true } });
+    });
+    let clock = 0;
+    const sleeps: number[] = [];
+    const client = new ShopifyClient({
+      credentials: CREDENTIALS,
+      fetch: ff.fetch,
+      now: () => clock,
+      sleep: async (ms) => { sleeps.push(ms); clock += ms; },
+    });
+    await expect(client.request('{ ok }')).resolves.toEqual({ ok: true });
+    // 400 points short at 100 a second: one 4s wait, not the 500ms backoff,
+    // and no second wait before the retry since the bucket refilled meanwhile.
+    expect(sleeps).toEqual([4000]);
+  });
+});
