@@ -1,6 +1,6 @@
 {
   "name": "@strlngco/fallback-shopify",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "private": true,
   "description": "Shopify adapter for Fallback. Owns GraphQL queries and response schemas.",
   "license": "MIT",

@@ -3,7 +3,7 @@
 All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [1.1.0] — 2026-10-20
 
 ### Changed
 
@@ -221,5 +221,5 @@ Initial release, distributed from source and not tagged.
 - Authentication through Shopify's client credentials grant for Dev Dashboard
   apps; the access token is never written to disk.
 
-[Unreleased]: https://github.com/strlngco/fallback/compare/v1.0.1...HEAD
+[1.1.0]: https://github.com/strlngco/fallback/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/strlngco/fallback/releases/tag/v1.0.1
