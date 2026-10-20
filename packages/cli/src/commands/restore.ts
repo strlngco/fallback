@@ -15,6 +15,8 @@ import {
 } from '@strlngco/fallback-core';
 import {
   PartialProductRestoreError,
+  ShopifyAuthError,
+  ShopifyAuthExchangeError,
   ShopifyUserError,
   type ScopedRequester,
   type ShopifyClientOptions,
@@ -196,7 +198,7 @@ export class RestoreCommand extends Command<RestoreContext> {
 
     const result = await this.applyPlan(client, plan, auth.shopDomain);
     this.emitResult(writer, result);
-    return result.counts.failed > 0 ? 2 : 0;
+    return result.counts.failed > 0 || result.stopped !== undefined ? 2 : 0;
   }
 
   private async applyPlan(
@@ -205,59 +207,80 @@ export class RestoreCommand extends Command<RestoreContext> {
     shop: string,
   ): Promise<RestoreResult> {
     const results: RestoreOperationResult[] = [];
-
     const productOps = plan.operations.filter((op) => op.resource === 'products');
-    for (const op of productOps) {
-      try {
-        await this.context.deps.mutators.restoreProduct(client, op);
-        results.push({ resource: 'products', id: op.id, status: 'restored' });
-      } catch (err) {
-        results.push({
-          resource: 'products',
-          id: op.id,
-          status: 'failed',
-          error: messageOf(err),
-          ...(err instanceof PartialProductRestoreError ? { written: [...err.written] } : {}),
-        });
-      }
-    }
-
     const metafieldOps = plan.operations.filter((op) => op.resource === 'metafields');
-    for (const batch of chunk(metafieldOps, 25)) {
-      try {
-        await this.context.deps.mutators.restoreMetafields(client, batch);
-        for (const op of batch) results.push({ resource: 'metafields', id: op.id, status: 'restored' });
-      } catch (err) {
-        // metafieldsSet is atomic, so one rejected value fails the whole batch, and
-        // a deterministic plan would rebuild the same batch on every re-run. Retrying
-        // one at a time isolates the rejected metafield. Other errors (network, auth)
-        // would fail each retry the same way, so they are reported for the batch.
-        if (!(err instanceof ShopifyUserError) || batch.length === 1) {
-          const message = messageOf(err);
-          for (const op of batch) {
-            results.push({ resource: 'metafields', id: op.id, status: 'failed', error: message });
-          }
-          continue;
-        }
-        for (const op of batch) {
-          try {
-            await this.context.deps.mutators.restoreMetafields(client, [op]);
-            results.push({ resource: 'metafields', id: op.id, status: 'restored' });
-          } catch (singleErr) {
-            results.push({ resource: 'metafields', id: op.id, status: 'failed', error: messageOf(singleErr) });
-          }
-        }
-      }
-    }
-
     const metaobjectOps = plan.operations.filter((op) => op.resource === 'metaobjects');
-    for (const op of metaobjectOps) {
-      try {
-        await this.context.deps.mutators.restoreMetaobject(client, op);
-        results.push({ resource: 'metaobjects', id: op.id, status: 'restored' });
-      } catch (err) {
-        results.push({ resource: 'metaobjects', id: op.id, status: 'failed', error: messageOf(err) });
+    const attemptable = productOps.length + metafieldOps.length + metaobjectOps.length;
+
+    // Rejected credentials fail every remaining write the same way, so the
+    // first one stops the restore rather than repeating the failure per record.
+    const fail = (result: RestoreOperationResult, err: unknown): void => {
+      results.push(result);
+      if (isCredentialFailure(err)) throw new StopRestore(err);
+    };
+
+    let stopped: RestoreResult['stopped'];
+    try {
+      for (const op of productOps) {
+        try {
+          await this.context.deps.mutators.restoreProduct(client, op);
+          results.push({ resource: 'products', id: op.id, status: 'restored' });
+        } catch (err) {
+          fail(
+            {
+              resource: 'products',
+              id: op.id,
+              status: 'failed',
+              error: messageOf(err),
+              ...(err instanceof PartialProductRestoreError ? { written: [...err.written] } : {}),
+            },
+            err,
+          );
+        }
       }
+
+      for (const batch of chunk(metafieldOps, 25)) {
+        try {
+          await this.context.deps.mutators.restoreMetafields(client, batch);
+          for (const op of batch) results.push({ resource: 'metafields', id: op.id, status: 'restored' });
+        } catch (err) {
+          // metafieldsSet is atomic, so one rejected value fails the whole batch, and
+          // a deterministic plan would rebuild the same batch on every re-run. Retrying
+          // one at a time isolates the rejected metafield. Other errors (network, auth)
+          // would fail each retry the same way, so they are reported for the batch.
+          if (!(err instanceof ShopifyUserError) || batch.length === 1) {
+            const message = messageOf(err);
+            for (const op of batch) {
+              results.push({ resource: 'metafields', id: op.id, status: 'failed', error: message });
+            }
+            if (isCredentialFailure(err)) throw new StopRestore(err);
+            continue;
+          }
+          for (const op of batch) {
+            try {
+              await this.context.deps.mutators.restoreMetafields(client, [op]);
+              results.push({ resource: 'metafields', id: op.id, status: 'restored' });
+            } catch (singleErr) {
+              fail(
+                { resource: 'metafields', id: op.id, status: 'failed', error: messageOf(singleErr) },
+                singleErr,
+              );
+            }
+          }
+        }
+      }
+
+      for (const op of metaobjectOps) {
+        try {
+          await this.context.deps.mutators.restoreMetaobject(client, op);
+          results.push({ resource: 'metaobjects', id: op.id, status: 'restored' });
+        } catch (err) {
+          fail({ resource: 'metaobjects', id: op.id, status: 'failed', error: messageOf(err) }, err);
+        }
+      }
+    } catch (err) {
+      if (!(err instanceof StopRestore)) throw err;
+      stopped = { reason: messageOf(err.cause), notAttempted: attemptable - results.length };
     }
 
     const skippedCount =
@@ -269,6 +292,7 @@ export class RestoreCommand extends Command<RestoreContext> {
       appliedAt: this.context.deps.now().toISOString(),
       results,
       skipped: plan.skipped,
+      ...(stopped !== undefined ? { stopped } : {}),
       counts: {
         restored: results.filter((r) => r.status === 'restored').length,
         failed: results.filter((r) => r.status === 'failed').length,
@@ -337,6 +361,17 @@ export function resolveRestoreScope(
     inventoryLevels: false,
     metaobjects: requested.metaobjects,
   };
+}
+
+class StopRestore extends Error {
+  constructor(cause: unknown) {
+    super('restore stopped', { cause });
+  }
+}
+
+function isCredentialFailure(err: unknown): boolean {
+  if (err instanceof ShopifyAuthError || err instanceof ShopifyAuthExchangeError) return true;
+  return err instanceof PartialProductRestoreError && isCredentialFailure(err.cause);
 }
 
 function chunk<T>(items: T[], size: number): T[][] {

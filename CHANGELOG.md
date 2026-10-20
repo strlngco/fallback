@@ -18,6 +18,10 @@ All notable changes to this project are documented here. The format is based on
 
 ### Fixed
 
+- `restore --apply` stops at the first write Shopify rejects for bad
+  credentials, instead of attempting every remaining record and failing
+  each the same way. The report says how many operations were not
+  attempted; `--json` output carries it as `stopped`. Exit code `2`.
 - When a product is only partly restored (its product fields or a first
   batch of variants were written before a later call failed), `restore
   --apply` now says what was written, in the report and as a `written`

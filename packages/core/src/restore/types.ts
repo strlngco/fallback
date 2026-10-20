@@ -64,6 +64,14 @@ export const RestoreResultSchema = z.object({
   appliedAt: z.string().datetime({ offset: true }),
   results: z.array(RestoreOperationResultSchema),
   skipped: RestoreSkippedSchema,
+  // Set when the restore stopped before attempting every operation. Operations
+  // not attempted are absent from results.
+  stopped: z
+    .object({
+      reason: z.string(),
+      notAttempted: z.number().int().nonnegative(),
+    })
+    .optional(),
   counts: z.object({
     restored: z.number().int().nonnegative(),
     failed: z.number().int().nonnegative(),

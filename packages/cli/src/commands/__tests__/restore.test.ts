@@ -7,7 +7,7 @@ import { Cli } from 'clipanion';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Manifest, RestoreOperation } from '@strlngco/fallback-core';
-import { PartialProductRestoreError, ShopifyUserError, type Metafield, type Metaobject, type MetaobjectDefinition } from '@strlngco/fallback-shopify';
+import { PartialProductRestoreError, ShopifyAuthError, ShopifyUserError, type Metafield, type Metaobject, type MetaobjectDefinition } from '@strlngco/fallback-shopify';
 import type { ProductRecord } from '../../snapshot/writer';
 import { RestoreCommand, type RestoreContext, type RestoreDependencies } from '../restore';
 
@@ -313,6 +313,64 @@ describe('RestoreCommand (--apply)', () => {
     const json = await run(['restore', SNAPSHOT_ID, '--base-dir', baseDir, '--apply', '--json'], deps);
     const parsed = JSON.parse(json.stdout) as { results: Array<{ status: string; written?: string[] }> };
     expect(parsed.results[0]).toMatchObject({ status: 'failed', written: ['product fields', '100 of 150 variants'] });
+  });
+
+  it('stops at the first rejected-credentials failure instead of failing every record', async () => {
+    const manifest: Manifest = {
+      version: 1, shop: SHOP, capturedAt: '2026-05-29T04:24:50.000Z', apiVersion: '2026-04',
+      fallbackVersion: '0.1.0',
+      scope: { products: true, collections: true, metafields: true, inventoryLevels: true, themes: false, customers: false, orders: false, discounts: false },
+      counts: { products: 3, variants: 3, collections: 0, metafields: 0, inventoryLevels: 0 },
+      durationMs: 1, snapshotId: SNAPSHOT_ID,
+    };
+    const ids = [1, 2, 3].map((n) => `gid://shopify/Product/${n}`);
+    await setupSnapshot(baseDir, ids.map((id, i) => buildProductRecord(`Old ${i}`, id)), manifest);
+    const deps = makeDeps(ids.map((id, i) => buildProductRecord(`New ${i}`, id)), {
+      mutators: {
+        restoreProduct: vi
+          .fn()
+          .mockResolvedValueOnce(undefined)
+          .mockRejectedValue(new ShopifyAuthError('Shopify rejected the access token.')),
+        restoreMetafields: vi.fn(async () => undefined),
+        restoreMetaobject: vi.fn(async () => undefined),
+      },
+    });
+
+    const human = await run(['restore', SNAPSHOT_ID, '--base-dir', baseDir, '--apply'], deps);
+    expect(human.exit).toBe(2);
+    expect(deps.mutators.restoreProduct).toHaveBeenCalledTimes(2);
+    expect(human.stderr).toContain('Restored 1, failed 1, skipped 0');
+    expect(human.stderr).toContain(
+      'Stopped: Shopify rejected the access token. 1 operation was not attempted. Fix the credentials and run restore again.',
+    );
+
+    const json = await run(['restore', SNAPSHOT_ID, '--base-dir', baseDir, '--apply', '--json'], deps);
+    const parsed = JSON.parse(json.stdout) as { stopped?: { notAttempted: number }; results: unknown[] };
+    expect(parsed.stopped?.notAttempted).toBe(2);
+    expect(parsed.results).toHaveLength(1);
+  });
+
+  it('keeps going after an ordinary failure', async () => {
+    const ids = [1, 2].map((n) => `gid://shopify/Product/${n}`);
+    const manifest: Manifest = {
+      version: 1, shop: SHOP, capturedAt: '2026-05-29T04:24:50.000Z', apiVersion: '2026-04',
+      fallbackVersion: '0.1.0',
+      scope: { products: true, collections: true, metafields: true, inventoryLevels: true, themes: false, customers: false, orders: false, discounts: false },
+      counts: { products: 2, variants: 2, collections: 0, metafields: 0, inventoryLevels: 0 },
+      durationMs: 1, snapshotId: SNAPSHOT_ID,
+    };
+    await setupSnapshot(baseDir, ids.map((id, i) => buildProductRecord(`Old ${i}`, id)), manifest);
+    const deps = makeDeps(ids.map((id, i) => buildProductRecord(`New ${i}`, id)), {
+      mutators: {
+        restoreProduct: vi.fn().mockRejectedValue(new ShopifyUserError('productUpdate', [{ field: ['title'], message: 'bad' }])),
+        restoreMetafields: vi.fn(async () => undefined),
+        restoreMetaobject: vi.fn(async () => undefined),
+      },
+    });
+    const { exit, stderr } = await run(['restore', SNAPSHOT_ID, '--base-dir', baseDir, '--apply'], deps);
+    expect(exit).toBe(2);
+    expect(deps.mutators.restoreProduct).toHaveBeenCalledTimes(2);
+    expect(stderr).not.toContain('Stopped:');
   });
 
   it('emits the result as JSON with --apply --json', async () => {

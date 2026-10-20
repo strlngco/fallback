@@ -34,6 +34,13 @@ export function formatRestoreResult(result: RestoreResult): string[] {
   lines.push(
     `Restored ${result.counts.restored}, failed ${result.counts.failed}, skipped ${result.counts.skipped}`,
   );
+  if (result.stopped !== undefined) {
+    const n = result.stopped.notAttempted;
+    lines.push(
+      `Stopped: ${result.stopped.reason} ${n} ${n === 1 ? 'operation was' : 'operations were'} not attempted. ` +
+        'Fix the credentials and run restore again.',
+    );
+  }
   const failures = result.results.filter((r) => r.status === 'failed');
   if (failures.length > 0) {
     lines.push('Failed:');
