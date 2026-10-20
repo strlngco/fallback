@@ -54,6 +54,12 @@ export async function diffResources<T>(
     if (!seen.has(id)) deleted.push(record);
   }
 
+  // Sorted so the same changes always print in the same order, whatever order
+  // the API returned records in.
+  created.sort((a, b) => compareIds(options.getId(a), options.getId(b)));
+  updated.sort((a, b) => compareIds(a.id, b.id));
+  deleted.sort((a, b) => compareIds(options.getId(a), options.getId(b)));
+
   return {
     created,
     updated,
@@ -63,4 +69,25 @@ export async function diffResources<T>(
     currentCount,
     ignoredCount,
   };
+}
+
+// Digit runs compare as numbers, so gid://shopify/Product/9 sorts before
+// gid://shopify/Product/10. Locale-independent, so every machine agrees.
+export function compareIds(a: string, b: string): number {
+  const partsA = a.match(/\d+|\D+/g) ?? [];
+  const partsB = b.match(/\d+|\D+/g) ?? [];
+  const length = Math.min(partsA.length, partsB.length);
+  for (let i = 0; i < length; i++) {
+    const x = partsA[i] as string;
+    const y = partsB[i] as string;
+    if (x === y) continue;
+    const bothDigits = /^\d/.test(x) && /^\d/.test(y);
+    if (bothDigits) {
+      const nx = x.replace(/^0+(?=\d)/, '');
+      const ny = y.replace(/^0+(?=\d)/, '');
+      if (nx.length !== ny.length) return nx.length - ny.length;
+    }
+    return x < y ? -1 : 1;
+  }
+  return partsA.length - partsB.length;
 }

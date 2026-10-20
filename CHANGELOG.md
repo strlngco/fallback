@@ -12,6 +12,9 @@ All notable changes to this project are documented here. The format is based on
   before they fetch or write anything, so a `.env` in the working
   directory that points at another store is visible at once. `--json`
   output is unchanged.
+- `diff` and `restore` list records in ID order, with numbers compared as
+  numbers, so the same changes always print in the same order, in the
+  human report and in `--json` output.
 
 ### Fixed
 

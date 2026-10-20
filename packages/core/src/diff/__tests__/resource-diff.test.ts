@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { diffResources } from '../resource-diff';
+import { compareIds, diffResources } from '../resource-diff';
 
 interface Item {
   id: string;
@@ -148,5 +148,54 @@ describe('diffResources', () => {
       getId,
     });
     expect(result.updated).toHaveLength(1);
+  });
+});
+
+describe('diffResources ordering', () => {
+  it('orders created, updated, and deleted by id whatever order the records arrive in', async () => {
+    const gid = (n: number): string => `gid://shopify/Product/${n}`;
+    const result = await diffResources<Item>({
+      snapshot: asAsyncIterable([
+        { id: gid(30), value: 0 },
+        { id: gid(10), value: 1 },
+        { id: gid(2), value: 1 },
+        { id: gid(20), value: 0 },
+      ]),
+      current: asAsyncIterable([
+        { id: gid(9), value: 0 },
+        { id: gid(10), value: 2 },
+        { id: gid(100), value: 0 },
+        { id: gid(2), value: 2 },
+      ]),
+      getId,
+    });
+    expect(result.created.map(getId)).toEqual([gid(9), gid(100)]);
+    expect(result.updated.map((u) => u.id)).toEqual([gid(2), gid(10)]);
+    expect(result.deleted.map(getId)).toEqual([gid(20), gid(30)]);
+  });
+});
+
+describe('compareIds', () => {
+  it('compares digit runs as numbers', () => {
+    const ids = ['gid://shopify/Product/10', 'gid://shopify/Product/9', 'gid://shopify/Product/100'];
+    expect([...ids].sort(compareIds)).toEqual([
+      'gid://shopify/Product/9',
+      'gid://shopify/Product/10',
+      'gid://shopify/Product/100',
+    ]);
+  });
+
+  it('orders by resource type before number', () => {
+    expect(compareIds('gid://shopify/Collection/9', 'gid://shopify/Product/1')).toBeLessThan(0);
+  });
+
+  it('handles ids longer than a safe integer', () => {
+    expect(compareIds('x/99999999999999999999', 'x/100000000000000000000')).toBeLessThan(0);
+  });
+
+  it('returns 0 only for identical ids', () => {
+    expect(compareIds('a/1', 'a/1')).toBe(0);
+    expect(compareIds('a/01', 'a/1')).not.toBe(0);
+    expect(compareIds('a', 'a/1')).toBeLessThan(0);
   });
 });
