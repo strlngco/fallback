@@ -36,7 +36,7 @@ Fallback is one deterministic engine (snapshot, then diff, then restore) with tw
 If you already use Node and the command line:
 
 ```bash
-npm install -g @strlngco/fallback     # Node 20 or later
+npm install -g @strlngco/fallback     # Node 22.23.4, 24.22.1, 26.12.1 or later
 ```
 
 Create a Dev Dashboard app with the [scopes below](#step-4-create-a-shopify-app-for-fallback), install it on your store, put its credentials in `~/.fallback/.env`, then:
@@ -73,18 +73,18 @@ Keep this window open for the rest of the guide.
 
 ### Step 2: Install Node.js
 
-Fallback runs on Node.js, version 20 or later. Check whether you already have it:
+Fallback runs on Node.js 22.23.4, 24.22.1, 26.12.1 or a later release in the same major version. Earlier releases have TLS security flaws that matter to a tool sending your store's credentials over the internet. Check whether you already have it:
 
 ```bash
 node --version
 ```
 
-If that prints `v20` or higher (for example `v22.11.0`), skip to step 3. If it prints an older version or `command not found`, install Node:
+If that prints `v22.23.4`, `v24.22.1`, `v26.12.1` or a later release in one of those majors, skip to step 3. If it prints an older version or `command not found`, install Node:
 
 1. Go to [nodejs.org](https://nodejs.org) and download the **LTS** installer for your system.
 2. Run the installer and accept the defaults.
 3. **Close your terminal and open a new one**, so it picks up the newly installed programs.
-4. Run `node --version` again to confirm it prints `v20` or higher.
+4. Run `node --version` again to confirm it prints one of the versions above.
 
 Installing Node also installs `npm`, the tool used in the next step to install Fallback.
 
@@ -540,11 +540,11 @@ Three packages in a monorepo, plus a thin scheduler layer for the monitor.
 - `@strlngco/fallback`: the user-facing CLI. The only package that touches disk, environment variables, or stdout. The published package bundles the other two.
 - `scripts/sentinel*.mjs`: the monitor. Zero-dependency Node scripts that run the built CLI on a schedule and file reports. Nothing in `packages/` knows the monitor exists.
 
-The codebase is TypeScript, strict mode, ESM only, Node 20+. Runtime dependencies are minimal: `zod` for schema validation, `clipanion` for CLI parsing, `graphql-request` for the API client, `picocolors` for terminal color.
+The codebase is TypeScript, strict mode, ESM only, Node 22+. Runtime dependencies are minimal: `zod` for schema validation, `clipanion` for CLI parsing, `graphql-request` for the API client, `picocolors` for terminal color.
 
 ## Development
 
-Working on Fallback itself needs [pnpm](https://pnpm.io) as well as Node 20+.
+Working on Fallback itself needs [pnpm](https://pnpm.io) as well as Node 22.23.4, 24.22.1, 26.12.1 or later (the repo's `.node-version` pins 26.12.1).
 
 ```bash
 git clone https://github.com/strlngco/fallback.git

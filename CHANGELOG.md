@@ -3,6 +3,19 @@
 All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- **Breaking:** Fallback now requires Node.js 22.23.4, 24.22.1, 26.12.1 or a
+  later release in the same major version. Node 20 is end-of-life and gets
+  no fix for the October 2026 Node.js security release (TLS hostname-check
+  bypasses, a Brotli decompression flaw, and distrust of the compromised
+  eMudhra intermediate certificates). Fallback sends your store's
+  credentials to Shopify over HTTPS, so upgrade Node before upgrading
+  Fallback. npm warns rather than refuses on an older Node unless
+  `engine-strict` is set.
+
 ## [1.1.0] — 2026-10-20
 
 ### Changed
