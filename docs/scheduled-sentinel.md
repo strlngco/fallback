@@ -76,7 +76,12 @@ its rolling snapshot baseline. So it runs as a **Background Worker** with
 its own scheduler loop (`scripts/sentinel-loop.mjs`) standing in for cron.
 
 1. New → Background Worker. Connect `strlngco/fallback`, branch `main`.
-   Runtime: Node 20 or later.
+   Runtime: Node. The repo's `.node-version` pins the version Render builds
+   with; a `NODE_VERSION` environment variable on the service overrides it.
+   Use 22.23.4, 24.22.1, 26.12.1 or a later release in the same major — the
+   earlier releases trust compromised eMudhra intermediates and are open to
+   TLS hostname-check bypasses. After changing the version, redeploy with
+   Manual Deploy → Clear build cache & deploy.
 2. Build command:
 
    ```bash
@@ -134,9 +139,14 @@ values. If the theme repo is public, the reports are too. Point
 **PAT setup.** Create a fine-grained personal access token dedicated to this
 purpose:
 
-1. GitHub → Settings → Developer settings → Personal access tokens →
-   Fine-grained tokens → Generate new token.
-2. Resource owner: the theme repo's org.
+1. Your avatar → Settings (your personal settings, not the org's — an
+   org's settings have no Developer settings) → Developer settings →
+   Personal access tokens → Fine-grained tokens → Generate new token, or
+   go straight to <https://github.com/settings/personal-access-tokens/new>.
+2. Resource owner: the theme repo's org. A token owned by your personal
+   account can still read a public theme repo but cannot file issues in
+   it. If the org requires approval, an org owner approves the token under
+   the org's Settings → Personal access tokens → Pending requests.
 3. Repository access: only that repo — not all repos in the org.
 4. Permissions: Issues — Read and write. Nothing else.
 5. Note the expiry date and calendar the renewal. A fine-grained token's
@@ -144,7 +154,22 @@ purpose:
    `SENTINEL FAILURE — report` in the Render log (see below), not a
    dramatic failure.
 
-Set the resulting token as `SENTINEL_GITHUB_TOKEN`.
+Set the resulting token as `SENTINEL_GITHUB_TOKEN`, redeploy, and check
+from a new Shell tab that it can file issues — a read check passes for a
+token that cannot write. This opens a test issue; close it afterwards:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" -X POST \
+  -H "Authorization: Bearer $SENTINEL_GITHUB_TOKEN" \
+  -H "Accept: application/vnd.github+json" \
+  https://api.github.com/repos/$SENTINEL_REPORT_REPO/issues \
+  -d '{"title":"Sentinel token test — safe to close","body":"Checking SENTINEL_GITHUB_TOKEN can file reports."}'
+```
+
+`201` means reports will arrive. `404` means the token cannot see the repo:
+check `SENTINEL_REPORT_REPO`, the token's resource owner, and whether an org
+owner revoked or has yet to approve it. `401` means the shell has a stale or
+invalid token.
 
 **Issue titles** name the shop and the run date:
 `Fallback drift report — <shop> — <isoDate>` on a drift day,
