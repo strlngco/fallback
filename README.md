@@ -313,6 +313,8 @@ Four commands, four jobs.
 
 `restore` re-applies a snapshot to records that have drifted. It recomputes the diff, then writes only the fields that changed; nothing is touched if a record is already in sync. Dry-run by default; `--apply` performs the writes.
 
+A Claude Code skill in [`skills/fallback/`](https://github.com/strlngco/fallback/tree/main/skills/fallback) (copy the folder into `~/.claude/skills/`) has the agent run `snapshot` before it writes to your store and `diff` after, and show you the result; it never runs `restore --apply`.
+
 Everything is local. No cloud sync, no telemetry, no remote storage. Snapshots live on your disk. The only network traffic is to your own Shopify Admin API.
 
 ## Command reference
