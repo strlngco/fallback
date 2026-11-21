@@ -61,3 +61,61 @@ describe('formatRestoreResult', () => {
     expect(out).toContain('gid://shopify/Product/9::custom::k: invalid value');
   });
 });
+
+describe('formatRestorePlan product operations', () => {
+  function planFor(changes: RestorePlan['operations'][number]['changes']): RestorePlan {
+    return {
+      snapshotId: 's',
+      shop: 'x',
+      builtAt: '2026-11-21T00:00:00.000Z',
+      operations: [
+        {
+          resource: 'products',
+          id: 'gid://shopify/Product/9',
+          changes,
+          targetRecord: {
+            id: 'gid://shopify/Product/9',
+            title: 'The Complete Snowboard',
+            variants: [{ id: 'gid://shopify/ProductVariant/68090405060973', title: 'Ice' }],
+          },
+        },
+      ],
+      skipped: { created: [], deleted: [], unsupported: [] },
+    };
+  }
+
+  it('names the product by its snapshot title, with the GID alongside', () => {
+    const out = stripAnsi(formatRestorePlan(planFor([{ path: 'title', before: 'Sale', after: 'The Complete Snowboard' }])));
+    expect(out).toContain('  ~ The Complete Snowboard (gid://shopify/Product/9)');
+  });
+
+  it('names a variant by title and shows a price without .amount or quotes', () => {
+    const out = stripAnsi(
+      formatRestorePlan(
+        planFor([
+          {
+            path: 'variants[gid://shopify/ProductVariant/68090405060973].price.amount',
+            before: '559.96',
+            after: '699.95',
+          },
+        ]),
+      ),
+    );
+    expect(out).toContain('      Ice / price: 559.96 → 699.95');
+  });
+
+  it('keeps the id-only line for non-product resources', () => {
+    const plan: RestorePlan = {
+      ...PLAN,
+      operations: [
+        {
+          resource: 'metafields',
+          id: 'gid://shopify/Product/9::custom::k',
+          changes: [{ path: 'value', before: 'a', after: 'b' }],
+          targetRecord: { namespace: 'custom', key: 'k' },
+        },
+      ],
+    };
+    expect(stripAnsi(formatRestorePlan(plan))).toContain('  ~ gid://shopify/Product/9::custom::k (metafields)');
+  });
+});

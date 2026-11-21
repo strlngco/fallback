@@ -3,6 +3,20 @@
 All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- `fallback diff` names variants by title in its human output. A price change
+  now reads `Ice / price: 699.95 → 559.96` instead of
+  `variants[gid://shopify/ProductVariant/…].price.amount: "699.95" → "559.96"`.
+  On a single-variant product the label is dropped (`price: 64.00 → 51.20`).
+  If a variant can't be named unambiguously, the GID path is kept. `--json`
+  output is unchanged.
+- `fallback restore`'s dry-run plan uses the same field labels, and names each
+  product by its snapshot title: `~ The Complete Snowboard (gid://…)` instead
+  of `~ gid://… (products)`. Other resources are listed as before.
+
 ## [1.2.0] — 2026-11-01
 
 ### Changed

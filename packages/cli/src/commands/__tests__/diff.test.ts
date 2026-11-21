@@ -925,7 +925,7 @@ describe('DiffCommand', () => {
     );
     expect(exit).toBe(0);
     expect(stderr).toContain(
-      'variants[gid://shopify/ProductVariant/100].price.amount: "80.00" → "85.00"',
+      'Default / price: 80.00 → 85.00',
     );
   });
 
@@ -1039,7 +1039,7 @@ describe('DiffCommand', () => {
     );
     expect(exit).toBe(0);
     expect(stderr).toContain('Updated: 1');
-    expect(stderr).toContain('variants[gid://shopify/ProductVariant/100].inventoryQuantity: 5 → 3');
+    expect(stderr).toContain('Default / inventoryQuantity: 5 → 3');
   });
 
   it('does not emit the ignored line in --show-ignored mode', async () => {

@@ -1,7 +1,9 @@
 import pc from 'picocolors';
 
-import type { FieldChange, ResourceDiff, SnapshotDiff } from '@strlngco/fallback-core';
+import type { ResourceDiff, SnapshotDiff } from '@strlngco/fallback-core';
 import type { Metafield } from '@strlngco/fallback-shopify';
+
+import { collectVariantTitles, formatChange } from './changes';
 
 interface ResourceSection {
   key:
@@ -25,7 +27,6 @@ const SECTIONS: readonly ResourceSection[] = [
   { key: 'metafieldDefinitions', label: 'MetafieldDefinitions' },
 ];
 
-const MAX_VALUE_PREVIEW = 60;
 const MAX_INLINE_CHANGES = 3;
 
 export function formatDiffSummary(diff: SnapshotDiff): string[] {
@@ -66,8 +67,9 @@ export function formatDiffHuman(diff: SnapshotDiff, opts: { showIgnored: boolean
     for (const u of r.updated) {
       lines.push(`    ${pc.yellow('~')} ${displayName(section.key, u.after)} (${displayId(section.key, u.after)})`);
       if (opts.showIgnored || u.changes.length <= MAX_INLINE_CHANGES) {
+        const variantTitles = section.key === 'products' ? collectVariantTitles(u.before, u.after) : undefined;
         for (const change of u.changes) {
-          lines.push(`        ${pc.dim(formatChange(change))}`);
+          lines.push(`        ${pc.dim(formatChange(change, variantTitles))}`);
         }
       } else {
         lines.push(`        ${pc.dim(`${u.changes.length} field changes — use --json for details`)}`);
@@ -113,16 +115,4 @@ function displayId(key: ResourceSection['key'], item: unknown): string {
 
 function metafieldKey(m: Metafield): string {
   return `${m.ownerId}::${m.namespace}::${m.key}`;
-}
-
-function formatChange(change: FieldChange): string {
-  return `${change.path}: ${formatValue(change.before)} → ${formatValue(change.after)}`;
-}
-
-function formatValue(v: unknown): string {
-  if (v === undefined) return 'undefined';
-  const s = JSON.stringify(v);
-  if (s === undefined) return 'undefined';
-  if (s.length > MAX_VALUE_PREVIEW) return s.slice(0, MAX_VALUE_PREVIEW - 3) + '...';
-  return s;
 }

@@ -1,7 +1,8 @@
 import pc from 'picocolors';
-import type { FieldChange, RestorePlan, RestoreResult } from '@strlngco/fallback-core';
+import type { RestoreOperation, RestorePlan, RestoreResult } from '@strlngco/fallback-core';
 
-const MAX_VALUE_PREVIEW = 60;
+import { collectVariantTitles, formatChange } from './changes';
+
 const MAX_INLINE_CHANGES = 3;
 
 export function formatRestorePlan(plan: RestorePlan): string[] {
@@ -10,9 +11,10 @@ export function formatRestorePlan(plan: RestorePlan): string[] {
   lines.push('');
   lines.push(`To write: ${plan.operations.length}`);
   for (const op of plan.operations) {
-    lines.push(`  ${pc.yellow('~')} ${op.id} (${op.resource})`);
+    lines.push(`  ${pc.yellow('~')} ${operationLabel(op)}`);
     if (op.changes.length <= MAX_INLINE_CHANGES) {
-      for (const change of op.changes) lines.push(`      ${pc.dim(formatChange(change))}`);
+      const variantTitles = op.resource === 'products' ? collectVariantTitles(op.targetRecord) : undefined;
+      for (const change of op.changes) lines.push(`      ${pc.dim(formatChange(change, variantTitles))}`);
     } else {
       lines.push(`      ${pc.dim(`${op.changes.length} field changes — use --json for details`)}`);
     }
@@ -54,14 +56,10 @@ export function formatRestoreResult(result: RestoreResult): string[] {
   return lines;
 }
 
-function formatChange(change: FieldChange): string {
-  return `${change.path}: ${formatValue(change.before)} → ${formatValue(change.after)}`;
-}
-
-function formatValue(v: unknown): string {
-  if (v === undefined) return 'undefined';
-  const s = JSON.stringify(v);
-  if (s === undefined) return 'undefined';
-  if (s.length > MAX_VALUE_PREVIEW) return s.slice(0, MAX_VALUE_PREVIEW - 3) + '...';
-  return s;
+// Products are named by their snapshot title, matching `diff`. Anything else,
+// or a product record without a title, keeps the id and resource.
+function operationLabel(op: RestoreOperation): string {
+  const title = (op.targetRecord as Record<string, unknown> | undefined)?.['title'];
+  if (op.resource === 'products' && typeof title === 'string' && title !== '') return `${title} (${op.id})`;
+  return `${op.id} (${op.resource})`;
 }

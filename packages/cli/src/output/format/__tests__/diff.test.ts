@@ -215,3 +215,93 @@ describe('formatDiffHuman', () => {
     expect(shown).not.toContain('ignored changes');
   });
 });
+
+describe('formatDiffHuman variant changes', () => {
+  function productDiff(
+    variants: Array<{ id: string; title: string }>,
+    changes: Array<{ path: string; before?: unknown; after?: unknown }>,
+  ) {
+    const product = { id: 'gid://shopify/Product/9', title: 'The Complete Snowboard', variants };
+    return {
+      snapshotId: 's',
+      shop: 'x',
+      computedAt: '2026-11-21T00:00:00.000Z',
+      resources: {
+        products: {
+          created: [],
+          updated: [{ id: product.id, before: product, after: product, changes, ignoredCount: 0 }],
+          deleted: [],
+          snapshotCount: 1,
+          currentCount: 1,
+          ignoredCount: 0,
+        },
+      },
+    } as unknown as import('@strlngco/fallback-core').SnapshotDiff;
+  }
+
+  it('names a variant by its title instead of its GID, and shows a price without .amount or quotes', () => {
+    const lines = formatDiffHuman(
+      productDiff(
+        [{ id: 'gid://shopify/ProductVariant/68090405060973', title: 'Ice' }],
+        [
+          {
+            path: 'variants[gid://shopify/ProductVariant/68090405060973].price.amount',
+            before: '699.95',
+            after: '559.96',
+          },
+        ],
+      ),
+      { showIgnored: false },
+    );
+    expect(lines).toContain('        Ice / price: 699.95 → 559.96');
+  });
+
+  it('drops the variant label on a single-variant product (Default Title)', () => {
+    const lines = formatDiffHuman(
+      productDiff(
+        [{ id: 'gid://shopify/ProductVariant/1', title: 'Default Title' }],
+        [{ path: 'variants[gid://shopify/ProductVariant/1].sku', before: 'A', after: 'B' }],
+      ),
+      { showIgnored: false },
+    );
+    expect(lines).toContain('        sku: "A" → "B"');
+  });
+
+  it('keeps the GID path when the variant is not in the record', () => {
+    const lines = formatDiffHuman(
+      productDiff([], [{ path: 'variants[gid://shopify/ProductVariant/5].sku', before: 'A', after: 'B' }]),
+      { showIgnored: false },
+    );
+    expect(lines).toContain('        variants[gid://shopify/ProductVariant/5].sku: "A" → "B"');
+  });
+
+  it('keeps the GID path when two variants share a title, so the label is never ambiguous', () => {
+    const lines = formatDiffHuman(
+      productDiff(
+        [
+          { id: 'gid://shopify/ProductVariant/1', title: 'Default' },
+          { id: 'gid://shopify/ProductVariant/2', title: 'Default' },
+        ],
+        [{ path: 'variants[gid://shopify/ProductVariant/2].sku', before: 'A', after: 'B' }],
+      ),
+      { showIgnored: false },
+    );
+    expect(lines).toContain('        variants[gid://shopify/ProductVariant/2].sku: "A" → "B"');
+  });
+
+  it('labels a variant that was added or removed', () => {
+    const lines = formatDiffHuman(
+      productDiff(
+        [{ id: 'gid://shopify/ProductVariant/7', title: 'Sunset' }],
+        [
+          {
+            path: 'variants[gid://shopify/ProductVariant/7]',
+            after: { id: 'gid://shopify/ProductVariant/7', title: 'Sunset' },
+          },
+        ],
+      ),
+      { showIgnored: false },
+    );
+    expect(lines).toContain('        Sunset: variant added');
+  });
+});

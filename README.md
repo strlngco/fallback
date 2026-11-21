@@ -197,7 +197,7 @@ Products
         tags.length: 2 → 3
         tags.2: undefined → "sale"
     ~ Canvas Tote (gid://shopify/Product/8100000000002)
-        variants[gid://shopify/ProductVariant/4510000000003].price.amount: "64.00" → "51.20"
+        price: 64.00 → 51.20
   Deleted: 0
   3 ignored changes (use --show-ignored to view)
 
@@ -232,12 +232,12 @@ Planning restore of example-store.myshopify.com to snapshot 2026-10-12T14-30-22Z
 Dry run — no changes written. Re-run with --apply to write.
 
 To write: 2
-  ~ gid://shopify/Product/8100000000001 (products)
+  ~ Everyday Carry Bag (gid://shopify/Product/8100000000001)
       title: "Everyday Carry Bag | Free Shipping | Best Seller" → "Everyday Carry Bag"
       tags.length: 3 → 2
       tags.2: "sale" → undefined
-  ~ gid://shopify/Product/8100000000002 (products)
-      variants[gid://shopify/ProductVariant/4510000000003].price.amount: "51.20" → "64.00"
+  ~ Canvas Tote (gid://shopify/Product/8100000000002)
+      price: 51.20 → 64.00
 Skipped (created): 0
 Skipped (deleted): 0
 Skipped (unsupported): 0
@@ -391,8 +391,8 @@ Products
         updatedAt: "2026-09-01T10:00:00Z" → "2026-10-13T09:02:44Z"
     ~ Canvas Tote (gid://shopify/Product/8100000000002)
         updatedAt: "2026-09-01T10:00:00Z" → "2026-10-13T09:02:51Z"
-        variants[gid://shopify/ProductVariant/4510000000003].price.amount: "64.00" → "51.20"
-        variants[gid://shopify/ProductVariant/4510000000003].updatedAt: "2026-09-01T10:00:00Z" → "2026-10-13T09:02:51Z"
+        price: 64.00 → 51.20
+        updatedAt: "2026-09-01T10:00:00Z" → "2026-10-13T09:02:51Z"
   Deleted: 0
 ...
 ```
